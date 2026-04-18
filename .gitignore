@@ -3,19 +3,6 @@ node_modules/
 backend/node_modules/
 frontend/node_modules/
 
-# Sensitive data
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-backend/.env
-frontend/.env
-
-# Firebase & Secret Keys
-backend/config/*.json
-!backend/config/firebase.json
-
 # System Files
 .DS_Store
 Thumbs.db
