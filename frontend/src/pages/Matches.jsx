@@ -14,68 +14,50 @@ export default function Matches() {
   const [activeStatus, setActiveStatus] = useState('ALL');
 
   useEffect(() => {
-    api.get('/matches')
-      .then(({ data }) => setMatches(data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    api.get('/matches').then(({ data }) => setMatches(data)).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  const filtered = activeStatus === 'ALL'
-    ? matches
-    : matches.filter(m => m.status === activeStatus);
-
+  const filtered = activeStatus === 'ALL' ? matches : matches.filter(m => m.status === activeStatus);
   const counts = STATUS_TABS.reduce((acc, s) => {
     acc[s] = s === 'ALL' ? matches.length : matches.filter(m => m.status === s).length;
     return acc;
   }, {});
 
   return (
-    <div className="min-h-screen bg-ink-900">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-8 animate-fade-up">
-          <p className="section-title mb-1">My Activity</p>
-          <h1 className="page-header">Matches</h1>
-          <p className="text-ink-400 mt-2 text-sm">
-            Track your item matches, contact requests, and handshakes.
-          </p>
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1">Activity</p>
+          <h1 className="text-2xl font-bold text-slate-900">My Matches</h1>
+          <p className="text-sm text-slate-500 mt-1">Track matches, contact requests, and handshakes.</p>
         </div>
 
-        {/* Status filter */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 animate-fade-up" style={{ animationDelay: '0.1s' }}>
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
           {STATUS_TABS.map(s => (
-            <button
-              key={s}
-              onClick={() => setActiveStatus(s)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono whitespace-nowrap transition-all ${
+            <button key={s} onClick={() => setActiveStatus(s)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
                 activeStatus === s
-                  ? 'bg-amber-400 text-ink-900 font-semibold'
-                  : 'bg-ink-800 text-ink-400 hover:bg-ink-700 border border-ink-700'
-              }`}
-            >
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+              }`}>
               {s.charAt(0) + s.slice(1).toLowerCase()}
               {counts[s] > 0 && (
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                  activeStatus === s ? 'bg-ink-900/20 text-ink-900' : 'bg-ink-700 text-ink-300'
-                }`}>
-                  {counts[s]}
-                </span>
+                  activeStatus === s ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                }`}>{counts[s]}</span>
               )}
             </button>
           ))}
         </div>
 
-        {loading ? (
-          <Spinner />
-        ) : filtered.length === 0 ? (
-          <div className="card p-16 text-center animate-fade-up">
-            <div className="text-5xl mb-4 opacity-30">🔗</div>
-            <p className="text-ink-500 font-mono text-sm mb-2">
+        {loading ? <Spinner /> : filtered.length === 0 ? (
+          <div className="card p-14 text-center">
+            <div className="text-5xl mb-4 opacity-20">🔗</div>
+            <p className="text-slate-400 text-sm">
               {activeStatus === 'ALL' ? 'No matches yet' : `No ${activeStatus.toLowerCase()} matches`}
             </p>
-            <p className="text-ink-600 text-xs">
-              Matches are created automatically when items share category, keywords, and location.
-            </p>
+            <p className="text-slate-300 text-xs mt-1">Matches are created automatically when items share category, keywords, and location.</p>
           </div>
         ) : (
           <div className="space-y-3">
