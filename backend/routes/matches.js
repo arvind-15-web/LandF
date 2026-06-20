@@ -6,6 +6,7 @@ const Item = require('../models/Item');
 const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const { createNotification } = require('../utils/notifications');
+const Notification = require('../models/Notification');
 
 // GET /api/matches — Get matches for current user
 router.get('/', verifyToken, async (req, res) => {
@@ -232,6 +233,16 @@ router.post('/:id/handshake', verifyToken, async (req, res) => {
     // Mark both items as resolved
     await Item.findByIdAndUpdate(match.lostItem, { status: 'resolved' });
     await Item.findByIdAndUpdate(match.foundItem, { status: 'resolved' });
+
+    // Delete all old notifications related to matches of these two items
+    const relatedMatches = await Match.find({
+      $or: [
+        { lostItem: match.lostItem },
+        { foundItem: match.foundItem }
+      ]
+    }).select('_id');
+    const matchIds = relatedMatches.map(m => m._id);
+    await Notification.deleteMany({ relatedMatch: { $in: matchIds } });
 
     await createNotification({
       userId: match.foundUser,
