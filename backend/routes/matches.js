@@ -43,8 +43,14 @@ router.get('/', verifyToken, async (req, res) => {
       }
 
       // Never expose secret codes
-      if (match.lostItem) delete match.lostItem.secretCodeHash;
-      if (match.foundItem) delete match.foundItem.secretCodeHash;
+      if (match.lostItem) {
+        delete match.lostItem.secretCodeHash;
+        delete match.lostItem.secretCodePlain;
+      }
+      if (match.foundItem) {
+        delete match.foundItem.secretCodeHash;
+        if (!isFoundUser) delete match.foundItem.secretCodePlain;
+      }
 
       return match;
     });
@@ -81,8 +87,14 @@ router.get('/:id', verifyToken, async (req, res) => {
       if (matchObj.foundItem) matchObj.foundItem.contactPhone = '***hidden***';
     }
 
-    delete matchObj.lostItem?.secretCodeHash;
-    delete matchObj.foundItem?.secretCodeHash;
+    if (matchObj.lostItem) {
+      delete matchObj.lostItem.secretCodeHash;
+      delete matchObj.lostItem.secretCodePlain;
+    }
+    if (matchObj.foundItem) {
+      delete matchObj.foundItem.secretCodeHash;
+      if (!isFoundUser) delete matchObj.foundItem.secretCodePlain;
+    }
 
     res.json(matchObj);
   } catch (err) {
@@ -270,6 +282,49 @@ router.post('/:id/rate', verifyToken, async (req, res) => {
     }
 
     res.json({ message: `Rating submitted! ${starsToAdd} star(s) added to finder's profile.` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Helper to generate a short readable secret code
+const generateSecretCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+// POST /api/matches/:id/generate-code — Generate secret code (finder only, when APPROVED)
+router.post('/:id/generate-code', verifyToken, async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ message: 'Match not found' });
+    
+    if (match.status !== 'APPROVED') {
+      return res.status(400).json({ message: 'Match must be APPROVED to generate secret code' });
+    }
+
+    // Only the finder can generate the code
+    if (match.foundUser.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the finder can generate the secret code' });
+    }
+
+    const plainCode = generateSecretCode();
+    const salt = await bcrypt.genSalt(12);
+    const secretCodeHash = await bcrypt.hash(plainCode, salt);
+
+    // Save to the found item
+    const foundItem = await Item.findById(match.foundItem);
+    if (!foundItem) return res.status(404).json({ message: 'Associated found item not found' });
+
+    foundItem.secretCodeHash = secretCodeHash;
+    foundItem.secretCodePlain = plainCode;
+    await foundItem.save();
+
+    res.json({ message: 'Secret code generated successfully', secretCode: plainCode });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

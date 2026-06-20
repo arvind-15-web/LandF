@@ -83,6 +83,12 @@ export default function MatchDetail() {
     toast.success(data.message); fetchMatch();
   });
 
+  const handleGenerateCode = () => doAction(async () => {
+    await api.post(`/matches/${id}/generate-code`);
+    toast.success('🎉 Secret code generated!');
+    fetchMatch();
+  });
+
   const statuses = ['MATCHED', 'REQUESTED', 'APPROVED', 'COMPLETED'];
   const currentIdx = statuses.indexOf(match.status === 'REJECTED' ? 'REQUESTED' : match.status);
 
@@ -210,10 +216,46 @@ export default function MatchDetail() {
         )}
 
         {match.status === 'APPROVED' && isFoundUser && (
-          <div className="card p-5 text-center">
-            <div className="text-4xl mb-3">🤝</div>
-            <h3 className="font-bold text-slate-800 mb-1">Share Your Secret Code</h3>
-            <p className="text-sm text-slate-500">Give the secret code (from when you reported the found item) to the lost item owner when you meet.</p>
+          <div className="card p-5 text-center space-y-4">
+            <div className="text-4xl mb-1">🤝</div>
+            <h3 className="font-bold text-slate-800">Your Secret Verification Code</h3>
+            
+            {match.foundItem?.secretCodePlain ? (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-500">
+                  Give this code to the lost item owner when you meet. They will enter it to verify and complete the handover.
+                </p>
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl px-6 py-4 max-w-xs mx-auto">
+                  <span className="text-2xl font-extrabold text-blue-700 tracking-[0.3em] font-mono">
+                    {match.foundItem.secretCodePlain}
+                  </span>
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <button 
+                    onClick={() => { navigator.clipboard.writeText(match.foundItem.secretCodePlain); toast.success('Copied!'); }}
+                    className="btn-secondary text-xs py-2 px-4"
+                  >
+                    📋 Copy Code
+                  </button>
+                  <button 
+                    onClick={handleGenerateCode} 
+                    disabled={actionLoading} 
+                    className="btn-ghost text-xs text-red-500 py-2 px-4 border border-red-200 hover:bg-red-50"
+                  >
+                    🔄 Regenerate Code
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-slate-500">
+                  Generate a secret code to securely verify the handover during your physical meeting.
+                </p>
+                <button onClick={handleGenerateCode} disabled={actionLoading} className="btn-primary w-full py-2.5">
+                  {actionLoading ? 'Generating…' : '🔐 Generate Secret Code'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
