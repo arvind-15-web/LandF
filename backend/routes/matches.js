@@ -72,9 +72,9 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     if (!match) return res.status(404).json({ message: 'Match not found' });
 
-    const isParticipant =
-      match.lostUser._id.toString() === req.user._id.toString() ||
-      match.foundUser._id.toString() === req.user._id.toString();
+    const isLostUser = match.lostUser && (match.lostUser._id || match.lostUser).toString() === req.user._id.toString();
+    const isFoundUser = match.foundUser && (match.foundUser._id || match.foundUser).toString() === req.user._id.toString();
+    const isParticipant = isLostUser || isFoundUser;
 
     if (!isParticipant) return res.status(403).json({ message: 'Not authorized' });
 
@@ -116,8 +116,8 @@ router.post('/:id/request', verifyToken, async (req, res) => {
       return res.status(400).json({ message: `Cannot request contact. Current status: ${match.status}` });
     }
 
-    const isLostUser = match.lostUser._id.toString() === req.user._id.toString();
-    const isFoundUser = match.foundUser._id.toString() === req.user._id.toString();
+    const isLostUser = match.lostUser && (match.lostUser._id || match.lostUser).toString() === req.user._id.toString();
+    const isFoundUser = match.foundUser && (match.foundUser._id || match.foundUser).toString() === req.user._id.toString();
     if (!isLostUser && !isFoundUser) return res.status(403).json({ message: 'Not authorized' });
 
     match.status = 'REQUESTED';
@@ -168,9 +168,9 @@ router.post('/:id/respond', verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'You cannot respond to your own request' });
     }
 
-    const isParticipant =
-      match.lostUser._id.toString() === req.user._id.toString() ||
-      match.foundUser._id.toString() === req.user._id.toString();
+    const isLostUser = match.lostUser && (match.lostUser._id || match.lostUser).toString() === req.user._id.toString();
+    const isFoundUser = match.foundUser && (match.foundUser._id || match.foundUser).toString() === req.user._id.toString();
+    const isParticipant = isLostUser || isFoundUser;
     if (!isParticipant) return res.status(403).json({ message: 'Not authorized' });
 
     match.status = action === 'accept' ? 'APPROVED' : 'REJECTED';

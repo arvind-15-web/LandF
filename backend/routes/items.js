@@ -82,26 +82,12 @@ router.post('/', verifyToken, upload.array('images', 5), async (req, res) => {
       contactPhone: req.user.phone,
     };
 
-    // For found items: generate secret code
-    let plainCode;
-    if (type === 'found') {
-      plainCode = generateSecretCode();
-      const salt = await bcrypt.genSalt(12);
-      itemData.secretCodeHash = await bcrypt.hash(plainCode, salt);
-    }
-
     const item = await Item.create(itemData);
 
     // Trigger auto-matching in background
     runAutoMatching(item).catch(console.error);
 
-    const response = { message: 'Item reported successfully', item };
-    if (type === 'found' && plainCode) {
-      response.secretCode = plainCode;
-      response.secretCodeNote = 'IMPORTANT: Save this code! Give it to the lost item owner to verify the handshake. It will not be shown again.';
-    }
-
-    res.status(201).json(response);
+    res.status(201).json({ message: 'Item reported successfully', item });
   } catch (err) {
     console.error('Create item error:', err);
     res.status(500).json({ message: err.message });
