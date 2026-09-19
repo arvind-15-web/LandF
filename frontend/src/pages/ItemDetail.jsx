@@ -12,6 +12,8 @@ export default function ItemDetail() {
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     api.get(`/items/${id}`)
@@ -20,15 +22,16 @@ export default function ItemDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this reported item? This will also remove it from our database and matched lists. This cannot be undone.")) {
-      try {
-        await api.delete(`/items/${id}`);
-        import('react-hot-toast').then(t => t.default.success("Item deleted successfully"));
-        navigate('/dashboard');
-      } catch (err) {
-        import('react-hot-toast').then(t => t.default.error("Failed to delete item"));
-      }
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/items/${id}`);
+      import('react-hot-toast').then(t => t.default.success("Item deleted successfully"));
+      navigate('/dashboard');
+    } catch (err) {
+      import('react-hot-toast').then(t => t.default.error("Failed to delete item"));
+      setDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -134,7 +137,7 @@ export default function ItemDetail() {
                 <button onClick={() => navigate('/matches')} className="btn-primary text-sm py-2 w-full mb-3">
                   View Matches →
                 </button>
-                <button onClick={handleDelete} className="text-sm font-semibold text-red-500 hover:text-red-600 transition-colors w-full py-1">
+                <button onClick={() => setShowDeleteModal(true)} className="text-sm font-semibold text-red-500 hover:text-red-600 transition-colors w-full py-1">
                   🗑 Delete Report
                 </button>
               </div>
@@ -149,6 +152,39 @@ export default function ItemDetail() {
           </div>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-up">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-100 animate-fade-up" style={{ animationDuration: '0.2s' }}>
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                ⚠
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Report?</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                Are you sure you want to delete this reported item? This will also remove it from our database and all matched lists. This cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowDeleteModal(false)} 
+                  disabled={deleting}
+                  className="btn-secondary flex-1 py-2.5"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete} 
+                  disabled={deleting}
+                  className="btn-primary bg-red-600 hover:bg-red-700 shadow-red flex-1 py-2.5"
+                >
+                  {deleting ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
