@@ -20,6 +20,18 @@ export default function ItemDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this reported item? This will also remove it from our database and matched lists. This cannot be undone.")) {
+      try {
+        await api.delete(`/items/${id}`);
+        import('react-hot-toast').then(t => t.default.success("Item deleted successfully"));
+        navigate('/dashboard');
+      } catch (err) {
+        import('react-hot-toast').then(t => t.default.error("Failed to delete item"));
+      }
+    }
+  };
+
   if (loading) return <><Navbar /><Spinner fullscreen /></>;
   if (!item) return null;
 
@@ -119,8 +131,11 @@ export default function ItemDetail() {
             {isOwner ? (
               <div className="card p-4 bg-blue-50 border-blue-100 text-center">
                 <p className="text-sm text-blue-600 font-medium mb-3">This is your reported item</p>
-                <button onClick={() => navigate('/matches')} className="btn-primary text-sm py-2 w-full">
+                <button onClick={() => navigate('/matches')} className="btn-primary text-sm py-2 w-full mb-3">
                   View Matches →
+                </button>
+                <button onClick={handleDelete} className="text-sm font-semibold text-red-500 hover:text-red-600 transition-colors w-full py-1">
+                  🗑 Delete Report
                 </button>
               </div>
             ) : (

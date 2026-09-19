@@ -75,6 +75,39 @@ async def get_items(type: Optional[str] = None, user_id: Optional[str] = None, s
 async def get_item(id: str):
     item = await db.items.find_one({"_id": ObjectId(id)})
     if not item: raise HTTPException(status_code=404, detail="Item not found")
+    
+    user_doc = await db.users.find_one({"_id": ObjectId(item["reportedBy"])})
+    if user_doc:
+        item["reportedBy"] = {
+            "_id": str(user_doc["_id"]),
+            "name": user_doc.get("name"),
+            "profileImage": user_doc.get("profileImage"),
+            "stars": user_doc.get("stars", 0)
+        }
+    else:
+        item["reportedBy"] = str(item["reportedBy"])
+        
     item["_id"] = str(item["_id"])
-    item["reportedBy"] = str(item["reportedBy"])
     return item
+
+@router.delete("/{id}")
+async def delete_item(id: str, user=Depends(get_current_user)):
+    item = await db.items.find_one({"_id": ObjectId(id)})
+    if not item: raise HTTPException(404, "Not found")
+    if str(item["reportedBy"]) != str(user["_id"]): raise HTTPException(403, "Not authorized")
+    
+    # Delete from cloudinary
+    if item.get("images"):
+        for url in item["images"]:
+            try:
+                # Extract public_id roughly (assuming standard format)
+                public_id = url.split("/")[-1].split(".")[0]
+                cloudinary.uploader.destroy(public_id)
+            except Exception as e:
+                print("Cloudinary delete error:", e)
+                
+    # Delete from mongo
+    await db.items.delete_one({"_id": ObjectId(id)})
+    # Delete related matches
+    await db.matches.delete_many({"$or": [{"lostItem": ObjectId(id)}, {"foundItem": ObjectId(id)}]})
+    return {"message": "Item deleted successfully"}
