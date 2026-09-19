@@ -119,7 +119,7 @@ export default function Login() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-slate-900 mb-1">Enter your phone</h2>
-                <p className="text-sm text-slate-500">Provide a contact number for when items are found</p>
+                <p className="text-sm text-slate-500">Provide a contact number for communication when items are found</p>
               </div>
               <div>
                 <label className="label">Phone Number</label>
