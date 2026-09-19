@@ -2,17 +2,12 @@ import { useNavigate } from 'react-router-dom';
 
 const steps = [
   { icon: '📋', title: 'Report Item', desc: 'Report a lost or found item with photos, description, and location.' },
-  { icon: '🤖', title: 'Smart Matching', desc: 'Our system automatically matches items by category, keywords, and location.' },
+  { icon: '🤖', title: 'Smart AI Matching', desc: 'Our system automatically matches items by Semantic AI matching ' },
   { icon: '🤝', title: 'Connect Safely', desc: 'Request contact — shared only after mutual approval, protecting your privacy.' },
   { icon: '✅', title: 'Verify & Return', desc: 'Use the secret code to verify the handshake and complete the return.' },
 ];
 
-const stats = [
-  { value: '2,400+', label: 'Items Recovered' },
-  { value: '94%',    label: 'Match Accuracy' },
-  { value: '48h',    label: 'Avg. Return Time' },
-  { value: '12',     label: 'City Districts' },
-];
+
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -41,14 +36,14 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center animate-fade-up">
           <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 rounded-full px-4 py-1.5 text-sm font-medium mb-8">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            Smart City Initiative · Chennai
+            Campus Initiative · Chennai
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 leading-tight tracking-tight mb-6">
             Lost something?<br/>
             <span className="text-blue-600">We'll help you find it.</span>
           </h1>
           <p className="text-lg text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed">
-            A secure, community-driven platform that reunites people with their lost belongings using intelligent matching and privacy-first contact sharing.
+Lost & Found is a smart campus platform that uses AI to instantly match lost items with found ones and securely reconnect owners while protecting their privacy.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => navigate('/login')} className="btn-primary text-base py-3 px-8">
@@ -60,18 +55,6 @@ export default function Landing() {
               How It Works
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="border-y border-slate-100 bg-slate-50 py-12 px-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="text-3xl font-extrabold text-blue-600 mb-1">{s.value}</div>
-              <div className="text-sm text-slate-500">{s.label}</div>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -102,7 +85,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { icon: '🔐', title: 'Firebase Auth', desc: 'Google login + Phone OTP — two layers of verified identity.' },
+              { icon: '🔐', title: 'Firebase Auth', desc: 'Google login layers for verifiying identity.' },
               { icon: '🔒', title: 'Contact Gating', desc: 'Phone numbers are hidden until both parties approve sharing.' },
               { icon: '🤝', title: 'Secret Handshake', desc: 'Bcrypt-encrypted codes verify physical exchange before marking resolved.' },
             ].map((f) => (
@@ -120,7 +103,6 @@ export default function Landing() {
       <section className="px-6 py-24 text-center bg-blue-600">
         <div className="max-w-xl mx-auto">
           <h2 className="text-3xl font-extrabold text-white mb-4">Ready to recover?</h2>
-          <p className="text-blue-100 mb-8">Join thousands of citizens helping each other reconnect with lost belongings.</p>
           <button onClick={() => navigate('/login')}
             className="bg-white text-blue-700 font-bold py-3 px-10 rounded-lg hover:bg-blue-50 transition-colors text-base">
             Start Now →
@@ -129,7 +111,7 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-slate-200 px-6 py-5 text-center">
-        <p className="text-xs text-slate-400">Lost & Found · Smart City Platform · Built for the community</p>
+        <p className="text-xs text-slate-400">Lost & Found ·Smart Campus platform · Built for the community</p>
       </footer>
     </div>
   );

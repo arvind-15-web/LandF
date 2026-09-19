@@ -10,6 +10,7 @@ export default function Profile() {
   const { user, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone?.replace('+91', '') || '');
   const [saving, setSaving] = useState(false);
   const [myItems, setMyItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(true);
@@ -36,6 +37,7 @@ export default function Profile() {
     try {
       const fd = new FormData();
       if (name !== user.name) fd.append('name', name);
+      if (phone !== user.phone?.replace('+91', '')) fd.append('phone', '+91' + phone);
       if (imgFile) fd.append('profileImage', imgFile);
       await api.patch('/users/profile', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       await refreshUser();
@@ -144,13 +146,16 @@ export default function Profile() {
                 </div>
                 <div>
                   <label className="label">Phone</label>
-                  <input type="tel" value={user?.phone || ''} className="input bg-slate-50 text-slate-400 cursor-not-allowed" readOnly/>
-                  <p className="text-xs text-slate-400 mt-1">Phone cannot be changed</p>
+                  <div className="flex gap-2">
+                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 text-slate-500 text-sm font-medium shrink-0">+91</div>
+                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g,'').slice(0,10))} maxLength={10} className="input" placeholder="9876543210"/>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Update your contact number</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-5">
                 <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
-                  {saving ? 'Saving…' : 'Save Changes'}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button onClick={handleLogout} className="btn-danger px-4">
                   <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -45,5 +45,3 @@ export const onForegroundMessage = (callback) => {
   if (!messaging) return () => {};
   return onMessage(messaging, callback);
 };
-
-export { RecaptchaVerifier, signInWithPhoneNumber };

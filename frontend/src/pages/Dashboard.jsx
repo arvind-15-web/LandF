@@ -22,10 +22,15 @@ export default function Dashboard() {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ type: activeTab, limit: 24 });
-      if (category !== 'all') params.set('category', category);
-      const { data } = await api.get(`/items?${params}`);
-      setItems(data.items);
+      if (activeTab === 'my_reports') {
+        const { data } = await api.get('/items/my/items');
+        setItems(category !== 'all' ? data.filter(i => i.category === category) : data);
+      } else {
+        const params = new URLSearchParams({ type: activeTab, limit: 24 });
+        if (category !== 'all') params.set('category', category);
+        const { data } = await api.get(`/items?${params}`);
+        setItems(data.items.filter(i => i.reportedBy !== user?._id));
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -68,12 +73,12 @@ export default function Dashboard() {
         <div className="animate-fade-up">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-              {['lost', 'found'].map(t => (
+              {['lost', 'found', 'my_reports'].map(t => (
                 <button key={t} onClick={() => setActiveTab(t)}
                   className={`px-5 py-1.5 rounded-lg text-sm font-semibold capitalize transition-all ${
                     activeTab === t ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
                   }`}>
-                  {t === 'lost' ? '⚠ Lost' : '✓ Found'}
+                  {t === 'lost' ? '⚠ Lost' : t === 'found' ? '✓ Found' : ' My Reports'}
                 </button>
               ))}
             </div>
@@ -102,13 +107,15 @@ export default function Dashboard() {
 
           {loading ? <Spinner /> : filtered.length === 0 ? (
             <div className="card p-14 text-center">
-              <div className="text-5xl mb-4 opacity-20">{activeTab === 'lost' ? '🔍' : '📦'}</div>
+              <div className="text-5xl mb-4 opacity-20">{activeTab === 'lost' ? '🔍' : activeTab === 'found' ? '📦' : '👤'}</div>
               <p className="text-slate-400 text-sm mb-4">
-                {search ? 'No items match your search' : `No ${activeTab} items reported yet`}
+                {search ? 'No items match your search' : `No ${activeTab.replace('_', ' ')} items reported yet`}
               </p>
-              <button onClick={() => navigate(`/report/${activeTab}`)} className="btn-primary text-sm py-2">
-                Be the first to report
-              </button>
+              {activeTab !== 'my_reports' && (
+                <button onClick={() => navigate(`/report/${activeTab}`)} className="btn-primary text-sm py-2">
+                  Be the first to report
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

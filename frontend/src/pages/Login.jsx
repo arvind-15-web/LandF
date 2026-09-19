@@ -1,44 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup, GoogleAuthProvider, linkWithPhoneNumber, PhoneAuthProvider, signInWithCredential, linkWithCredential } from 'firebase/auth';
-import { auth, RecaptchaVerifier } from '../firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
-const STEPS = { GOOGLE: 'google', PHONE: 'phone', OTP: 'otp', REGISTER: 'register' };
-const OTP_ERRORS = {
-  'auth/invalid-phone-number':   'Invalid phone number. Enter a valid 10-digit number.',
-  'auth/too-many-requests':      'Too many attempts. Please wait a few minutes.',
-  'auth/captcha-check-failed':   'reCAPTCHA failed. Please refresh and try again.',
-  'auth/quota-exceeded':         'SMS quota exceeded. Add a test number in Firebase Console.',
-  'auth/app-not-authorized':     'Phone Auth not authorised — see setup steps below.',
-  'auth/operation-not-allowed':  'Phone sign-in is disabled. Enable it in Firebase Console → Authentication → Sign-in method.',
-  'auth/network-request-failed': 'Network error. Check your internet connection.',
-};
-const clearRecaptcha = () => {
-  if (window.recaptchaVerifier) { try { window.recaptchaVerifier.clear(); } catch {} window.recaptchaVerifier = null; }
-};
+const STEPS = { GOOGLE: 'google', PHONE: 'phone', REGISTER: 'register' };
 
 export default function Login() {
   const [step, setStep]                         = useState(STEPS.GOOGLE);
   const [loading, setLoading]                   = useState(false);
   const [phone, setPhone]                       = useState('');
-  const [otp, setOtp]                           = useState('');
   const [name, setName]                         = useState('');
-  const [confirmResult, setConfirmResult]       = useState(null);
   const [googleUser, setGoogleUser]             = useState(null);
   const [googleCredential, setGoogleCredential] = useState(null);
-  const [setupError, setSetupError]             = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
-
-  useEffect(() => () => clearRecaptcha(), []);
-
-  const setupRecaptcha = () => {
-    clearRecaptcha();
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible', callback: () => {}, 'expired-callback': clearRecaptcha });
-  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -52,47 +30,14 @@ export default function Login() {
         navigate('/dashboard'); return;
       } catch {}
       setGoogleUser(fbUser); setGoogleCredential(cred); setName(fbUser.displayName || ''); setStep(STEPS.PHONE);
-      toast.success('Google verified! Now confirm your phone.');
+      toast.success('Google verified! Now enter your phone.');
     } catch (err) { toast.error(err.message || 'Google sign-in failed'); }
     finally { setLoading(false); }
   };
 
-  const handleSendOtp = async () => {
+  const handlePhoneSubmit = () => {
     if (!phone || phone.length < 10) return toast.error('Enter a valid 10-digit number');
-    setSetupError(false);
-    try {
-      setLoading(true); setupRecaptcha(); await window.recaptchaVerifier.render();
-      const result = await linkWithPhoneNumber(auth.currentUser, `+91${phone}`, window.recaptchaVerifier);
-      setConfirmResult(result); setStep(STEPS.OTP); toast.success('OTP sent to +91 ' + phone);
-    } catch (err) {
-      console.error('[OTP send error]', err.code, err.message); clearRecaptcha();
-      if (err.code === 'auth/provider-already-linked') { setStep(STEPS.REGISTER); return; }
-      setSetupError(['auth/app-not-authorized','auth/operation-not-allowed'].includes(err.code));
-      toast.error(OTP_ERRORS[err.code] || err.message || 'Failed to send OTP', { duration: 8000 });
-    } finally { setLoading(false); }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length !== 6) return toast.error('Enter the 6-digit OTP');
-    try {
-      setLoading(true); await confirmResult.confirm(otp); setStep(STEPS.REGISTER);
-    } catch (err) {
-      console.error('[OTP verify error]', err.code, err.message);
-      if (err.code === 'auth/account-exists-with-different-credential') {
-        try {
-          toast.loading('Merging accounts…', { id: 'merge' });
-          const phoneCred = PhoneAuthProvider.credential(confirmResult.verificationId, otp);
-          await signInWithCredential(auth, phoneCred);
-          if (googleCredential) await linkWithCredential(auth.currentUser, googleCredential);
-          toast.dismiss('merge'); toast.success('Accounts merged!'); setStep(STEPS.REGISTER);
-        } catch (mergeErr) {
-          toast.dismiss('merge');
-          toast.error('Merge failed. Delete the phone-only user in Firebase Console → Authentication → Users, then try again.', { duration: 10000 });
-        }
-        return;
-      }
-      toast.error(err.code === 'auth/invalid-verification-code' ? 'Incorrect OTP.' : err.code === 'auth/code-expired' ? 'OTP expired. Tap Resend.' : 'OTP verification failed.');
-    } finally { setLoading(false); }
+    setStep(STEPS.REGISTER);
   };
 
   const handleRegister = async () => {
@@ -103,15 +48,17 @@ export default function Login() {
       const token = await currentUser.getIdToken(true);
       const { data } = await api.post('/auth/register', { firebaseToken: token, name: name.trim(), phone: currentUser.phoneNumber || `+91${phone}` });
       setUser(data.user); toast.success('Welcome to Lost & Found! 🎉'); navigate('/dashboard');
-    } catch (err) { toast.error(err.response?.data?.message || 'Registration failed'); }
+    } catch (err) {
+      console.error('Registration Catch Error:', err);
+      toast.error(err.response?.data?.message || err.message || 'Registration failed');
+    }
     finally { setLoading(false); }
   };
 
-  const stepIndex = [STEPS.PHONE, STEPS.OTP, STEPS.REGISTER].indexOf(step);
+  const stepIndex = [STEPS.PHONE, STEPS.REGISTER].indexOf(step);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center px-4">
-      <div id="recaptcha-container" />
       <div className="w-full max-w-sm animate-fade-up">
         <div className="text-center mb-8">
           <div className="inline-flex w-14 h-14 bg-blue-600 rounded-2xl items-center justify-center mb-4 shadow-blue">
@@ -125,7 +72,7 @@ export default function Login() {
 
         {step !== STEPS.GOOGLE && (
           <div className="flex items-center gap-2 justify-center mb-6">
-            {[STEPS.PHONE, STEPS.OTP, STEPS.REGISTER].map((s, i) => (
+            {[STEPS.PHONE, STEPS.REGISTER].map((s, i) => (
               <div key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i <= stepIndex ? 'bg-blue-600 w-10' : 'bg-slate-200 w-5'}`}/>
             ))}
           </div>
@@ -136,7 +83,7 @@ export default function Login() {
             <div className="space-y-5">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 mb-1">Sign in to continue</h2>
-                <p className="text-sm text-slate-500">Sign in with Google, then verify your phone for security.</p>
+                <p className="text-sm text-slate-500">Sign in with Google, then enter your phone for communication.</p>
               </div>
               <button onClick={handleGoogleSignIn} disabled={loading}
                 className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold py-3 px-4 rounded-lg transition-all shadow-sm disabled:opacity-50">
@@ -150,7 +97,7 @@ export default function Login() {
               </button>
               <div className="border-t border-slate-100 pt-4">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">How it works</p>
-                {[['1','Sign in with your Google account'],['2','Verify your phone number via OTP'],['3','Access your Lost & Found dashboard']].map(([n,t]) => (
+                {[['1','Sign in with your Google account'],['2','Enter your phone number for communication'],['3','Access your Lost & Found dashboard']].map(([n,t]) => (
                   <div key={n} className="flex items-center gap-3 text-sm text-slate-500 mb-2">
                     <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center shrink-0">{n}</span>{t}
                   </div>
@@ -171,46 +118,19 @@ export default function Login() {
                 </div>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 mb-1">Verify your phone</h2>
-                <p className="text-sm text-slate-500">We'll send an OTP to confirm your identity</p>
+                <h2 className="text-lg font-bold text-slate-900 mb-1">Enter your phone</h2>
+                <p className="text-sm text-slate-500">Provide a contact number for when items are found</p>
               </div>
               <div>
                 <label className="label">Phone Number</label>
                 <div className="flex gap-2">
                   <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 text-slate-500 text-sm font-medium shrink-0">+91</div>
-                  <input type="tel" inputMode="numeric" placeholder="9876543210" value={phone}
+                  <input type="tel" inputMode="numeric" placeholder="9345671594" value={phone}
                     onChange={e => setPhone(e.target.value.replace(/\D/g,'').slice(0,10))} className="input" maxLength={10} autoFocus/>
                 </div>
               </div>
-              {setupError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 space-y-1">
-                  <p className="font-bold">⚠ Firebase Phone Auth not configured</p>
-                  <p>1. Firebase Console → Authentication → Sign-in method → Phone → <strong>Enable</strong></p>
-                  <p>2. Add <strong>localhost</strong> to Authorised domains</p>
-                  <p>3. Add a test phone number under Phone → Test phone numbers</p>
-                </div>
-              )}
-              <button onClick={handleSendOtp} disabled={loading || phone.length < 10} className="btn-primary w-full py-3">
-                {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Sending OTP…</span> : 'Send OTP →'}
-              </button>
-            </div>
-          )}
-
-          {step === STEPS.OTP && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 mb-1">Enter OTP</h2>
-                <p className="text-sm text-slate-500">6-digit code sent to <span className="font-semibold text-slate-800">+91 {phone}</span></p>
-              </div>
-              <input type="text" inputMode="numeric" placeholder="• • • • • •" value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))}
-                className="input text-center text-2xl font-bold tracking-[0.5em] py-4" maxLength={6} autoFocus/>
-              <button onClick={handleVerifyOtp} disabled={loading || otp.length !== 6} className="btn-primary w-full py-3">
-                {loading ? 'Verifying…' : 'Verify OTP'}
-              </button>
-              <button onClick={handleSendOtp} disabled={loading}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-40 transition-colors">
-                Resend OTP
+              <button onClick={handlePhoneSubmit} disabled={loading || phone.length < 10} className="btn-primary w-full py-3">
+                {loading ? <span className="flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Loading…</span> : 'Continue →'}
               </button>
             </div>
           )}
@@ -233,7 +153,7 @@ export default function Login() {
               </div>
               <div>
                 <label className="label">Your Name</label>
-                <input type="text" placeholder="Ranjith Kumar M" value={name} onChange={e => setName(e.target.value)} className="input" autoFocus/>
+                <input type="text" placeholder="Arvind M" value={name} onChange={e => setName(e.target.value)} className="input" autoFocus/>
               </div>
               <button onClick={handleRegister} disabled={loading || !name.trim()} className="btn-primary w-full py-3">
                 {loading ? 'Setting up…' : 'Get Started →'}
@@ -241,7 +161,7 @@ export default function Login() {
             </div>
           )}
         </div>
-        <p className="text-center text-xs text-slate-400 mt-5">Secured by Firebase Authentication</p>
+        <p className="text-center text-xs text-slate-400 mt-5">Secured by Firebase Authentication. Phone numbers are hidden until both parties approve sharing</p>
       </div>
     </div>
   );
