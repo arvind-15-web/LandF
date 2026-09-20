@@ -38,9 +38,8 @@ async def create_item(
     res = await db.items.insert_one(new_item)
     new_item["_id"] = res.inserted_id
     
-    # Run auto matching async in background
-    import asyncio
-    asyncio.create_task(run_auto_matching(new_item))
+    # Run auto matching synchronously (Required for Vercel Serverless)
+    await run_auto_matching(new_item)
     
     new_item["_id"] = str(new_item["_id"])
     new_item["reportedBy"] = str(new_item["reportedBy"])
