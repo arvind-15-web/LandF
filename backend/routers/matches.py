@@ -14,11 +14,35 @@ async def get_my_matches(user=Depends(get_current_user)):
     cursor = db.matches.find({"$or": [{"lostUser": user_id}, {"foundUser": user_id}]}).sort("matchScore", -1)
     matches = []
     async for doc in cursor:
+        # Populate items and users
+        lost_item = await db.items.find_one({"_id": doc["lostItem"]})
+        found_item = await db.items.find_one({"_id": doc["foundItem"]})
+        lost_user = await db.users.find_one({"_id": doc["lostUser"]})
+        found_user = await db.users.find_one({"_id": doc["foundUser"]})
+        
         doc["_id"] = str(doc["_id"])
-        doc["lostItem"] = str(doc["lostItem"])
-        doc["foundItem"] = str(doc["foundItem"])
-        doc["lostUser"] = str(doc["lostUser"])
-        doc["foundUser"] = str(doc["foundUser"])
+        
+        if lost_item:
+            lost_item["_id"] = str(lost_item["_id"])
+            doc["lostItem"] = lost_item
+        else: doc["lostItem"] = None
+            
+        if found_item:
+            found_item["_id"] = str(found_item["_id"])
+            doc["foundItem"] = found_item
+        else: doc["foundItem"] = None
+            
+        if lost_user:
+            lost_user["_id"] = str(lost_user["_id"])
+            doc["lostUser"] = {"_id": lost_user["_id"], "name": lost_user.get("name"), "profileImage": lost_user.get("profileImage")}
+        else: doc["lostUser"] = None
+            
+        if found_user:
+            found_user["_id"] = str(found_user["_id"])
+            doc["foundUser"] = {"_id": found_user["_id"], "name": found_user.get("name"), "profileImage": found_user.get("profileImage")}
+        else: doc["foundUser"] = None
+
+        if doc.get("requestedBy"): doc["requestedBy"] = str(doc["requestedBy"])
         matches.append(doc)
     return matches
 
@@ -28,17 +52,46 @@ async def get_match(id: str, user=Depends(get_current_user)):
     if not match: raise HTTPException(404, "Match not found")
     
     # Populate items and users
-    match["lostItem"] = await db.items.find_one({"_id": match["lostItem"]})
-    match["foundItem"] = await db.items.find_one({"_id": match["foundItem"]})
-    match["lostUser"] = await db.users.find_one({"_id": match["lostUser"]})
-    match["foundUser"] = await db.users.find_one({"_id": match["foundUser"]})
+    lost_item = await db.items.find_one({"_id": match["lostItem"]})
+    found_item = await db.items.find_one({"_id": match["foundItem"]})
+    lost_user = await db.users.find_one({"_id": match["lostUser"]})
+    found_user = await db.users.find_one({"_id": match["foundUser"]})
     
-    # Clean up ObjectIds
     match["_id"] = str(match["_id"])
-    if match["lostItem"]: match["lostItem"]["_id"] = str(match["lostItem"]["_id"])
-    if match["foundItem"]: match["foundItem"]["_id"] = str(match["foundItem"]["_id"])
-    if match["lostUser"]: match["lostUser"]["_id"] = str(match["lostUser"]["_id"])
-    if match["foundUser"]: match["foundUser"]["_id"] = str(match["foundUser"]["_id"])
+    
+    if lost_item:
+        lost_item["_id"] = str(lost_item["_id"])
+        match["lostItem"] = lost_item
+    else: match["lostItem"] = None
+        
+    if found_item:
+        found_item["_id"] = str(found_item["_id"])
+        match["foundItem"] = found_item
+    else: match["foundItem"] = None
+        
+    is_approved = match.get("status") in ["APPROVED", "COMPLETED"]
+        
+    if lost_user:
+        lost_user["_id"] = str(lost_user["_id"])
+        match["lostUser"] = {
+            "_id": lost_user["_id"], 
+            "name": lost_user.get("name"), 
+            "profileImage": lost_user.get("profileImage")
+        }
+        if is_approved:
+            match["lostUser"]["phoneNumber"] = lost_user.get("phoneNumber")
+    else: match["lostUser"] = None
+        
+    if found_user:
+        found_user["_id"] = str(found_user["_id"])
+        match["foundUser"] = {
+            "_id": found_user["_id"], 
+            "name": found_user.get("name"), 
+            "profileImage": found_user.get("profileImage")
+        }
+        if is_approved:
+            match["foundUser"]["phoneNumber"] = found_user.get("phoneNumber")
+    else: match["foundUser"] = None
     
     if match.get("requestedBy"): match["requestedBy"] = str(match["requestedBy"])
     
